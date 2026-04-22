@@ -17,10 +17,28 @@ export function FlatView() {
   const parentRef = useRef<HTMLDivElement>(null)
 
   const folderMap = useMemo(() => {
+    const raw = new Map<number, { name: string; color: string; icon: string; parentId: number | null }>()
+    for (const f of folders) {
+      if (f.id != null) raw.set(f.id, { name: f.name, color: f.color, icon: f.icon, parentId: f.parentId })
+    }
+
+    const getRootFolder = (id: number | null): { name: string; color: string; icon: string } | null => {
+      if (id == null) return null
+      let current = raw.get(id)
+      if (!current) return null
+      while (current.parentId != null && raw.has(current.parentId)) {
+        current = raw.get(current.parentId)!
+      }
+      return { name: current.name, color: current.color, icon: current.icon }
+    }
+
     const map = new Map<string | number, { name: string; color: string; icon: string }>()
     map.set('uncategorized', { name: 'Uncategorized', color: '#8888a0', icon: 'Folder' })
     for (const f of folders) {
-      if (f.id != null) map.set(f.id, { name: f.name, color: f.color, icon: f.icon })
+      if (f.id != null) {
+        const root = getRootFolder(f.id)
+        if (root) map.set(f.id, root)
+      }
     }
     return map
   }, [folders])
@@ -92,9 +110,11 @@ export function FlatView() {
                   })()}
                 </div>
                 <div className="flat-item-right">
-                  <span className="flat-item-date">{new Date(item.dateAdded).toLocaleDateString('en-GB')}</span>
-                  {item.price > 0 && <span className="item-price">£{item.price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
                   {item.bought && <SquareCheckBig size={16} color="#22c55e" />}
+                  <div className="flat-item-price-date">
+                    {item.price > 0 && <span className="item-price">£{item.price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                    <span className="flat-item-date">{new Date(item.dateAdded).toLocaleDateString('en-GB')}</span>
+                  </div>
                 </div>
               </div>
             )
