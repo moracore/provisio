@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { icons, SquareCheckBig, ArrowUpFromDot } from 'lucide-react'
+import { icons, SquareCheckBig, ArrowUpFromDot, Settings } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { db, type Folder, type Item, getFolderTotal } from '../db'
 import { EditorModal } from './EditorModal'
@@ -101,7 +101,7 @@ function FolderCard({ folder, onOpen, onEdit }: {
       <span className="card-name">{folder.name}</span>
       {total != null && total > 0 && <span className="folder-total">£{total.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
       <button className="card-edit-btn" onClick={(e) => { e.stopPropagation(); onEdit() }}>
-        Edit
+        <Settings size={16} />
       </button>
     </div>
   )

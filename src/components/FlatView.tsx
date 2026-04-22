@@ -1,25 +1,26 @@
 import { useState, useRef, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { SquareCheckBig } from 'lucide-react'
+import { SquareCheckBig, icons } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { db } from '../db'
 import { EditorModal } from './EditorModal'
 import type { EditorTarget } from './EditorModal'
 
-type SortMode = 'date-asc' | 'date-desc' | 'price-asc' | 'price-desc' | 'category'
+type SortMode = 'newest' | 'recent' | 'oldest' | 'price-asc' | 'price-desc' | 'category'
 
 export function FlatView() {
-  const [sort, setSort] = useState<SortMode>('date-desc')
+  const [sort, setSort] = useState<SortMode>('newest')
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
   const items = useLiveQuery(() => db.items.toArray()) ?? []
   const folders = useLiveQuery(() => db.folders.toArray()) ?? []
   const parentRef = useRef<HTMLDivElement>(null)
 
-  const folderNameMap = useMemo(() => {
-    const map = new Map<string | number, string>()
-    map.set('uncategorized', 'Uncategorized')
+  const folderMap = useMemo(() => {
+    const map = new Map<string | number, { name: string; color: string; icon: string }>()
+    map.set('uncategorized', { name: 'Uncategorized', color: '#8888a0', icon: 'Folder' })
     for (const f of folders) {
-      if (f.id != null) map.set(f.id, f.name)
+      if (f.id != null) map.set(f.id, { name: f.name, color: f.color, icon: f.icon })
     }
     return map
   }, [folders])
@@ -27,19 +28,21 @@ export function FlatView() {
   const sorted = useMemo(() => {
     const arr = [...items]
     switch (sort) {
-      case 'date-asc': return arr.sort((a, b) => a.dateAdded - b.dateAdded)
-      case 'date-desc': return arr.sort((a, b) => b.dateAdded - a.dateAdded)
+      case 'newest': return arr.sort((a, b) => b.dateAdded - a.dateAdded)
+      case 'recent': return arr.sort((a, b) => (b.updatedAt ?? b.dateAdded) - (a.updatedAt ?? a.dateAdded))
+      case 'oldest': return arr.sort((a, b) => a.dateAdded - b.dateAdded)
       case 'price-asc': return arr.sort((a, b) => a.price - b.price)
       case 'price-desc': return arr.sort((a, b) => b.price - a.price)
       case 'category': return arr.sort((a, b) =>
-        (folderNameMap.get(a.folderId) ?? '').localeCompare(folderNameMap.get(b.folderId) ?? ''))
+        (folderMap.get(a.folderId)?.name ?? '').localeCompare(folderMap.get(b.folderId)?.name ?? ''))
     }
-  }, [items, sort, folderNameMap])
+  }, [items, sort, folderMap])
 
   const virtualizer = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 60,
+    estimateSize: () => 56,
+    gap: 8,
     overscan: 10,
   })
 
@@ -48,8 +51,9 @@ export function FlatView() {
       <div className="view-header">
         <h2>All Items</h2>
         <select value={sort} onChange={(e) => setSort(e.target.value as SortMode)}>
-          <option value="date-desc">Newest</option>
-          <option value="date-asc">Oldest</option>
+          <option value="newest">Newest</option>
+          <option value="recent">Recent</option>
+          <option value="oldest">Oldest</option>
           <option value="price-desc">Price ↓</option>
           <option value="price-asc">Price ↑</option>
           <option value="category">Category</option>
@@ -75,7 +79,17 @@ export function FlatView() {
               >
                 <div className="flat-item-info">
                   <span className="flat-item-name">{item.name}</span>
-                  <span className="flat-item-folder">{folderNameMap.get(item.folderId) ?? ''}</span>
+                  {(() => {
+                    const folder = folderMap.get(item.folderId)
+                    if (!folder) return null
+                    const FolderIcon = (icons[folder.icon as keyof typeof icons] ?? icons['Folder']) as LucideIcon
+                    return (
+                      <span className="flat-item-folder" style={{ color: folder.color }}>
+                        <FolderIcon size={12} />
+                        {folder.name}
+                      </span>
+                    )
+                  })()}
                 </div>
                 <div className="flat-item-right">
                   <span className="flat-item-date">{new Date(item.dateAdded).toLocaleDateString('en-GB')}</span>

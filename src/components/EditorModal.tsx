@@ -41,7 +41,7 @@ interface ItemDraft {
 }
 
 export function EditorModal({ target, onClose }: EditorModalProps) {
-  const [folderDraft, setFolderDraft] = useState<FolderDraft>({ name: '', color: '#6366f1', icon: 'Folder' })
+  const [folderDraft, setFolderDraft] = useState<FolderDraft>({ name: '', color: '#ee007b', icon: 'Folder' })
   const [itemDraft, setItemDraft] = useState<ItemDraft>({ name: '', description: '', price: '', link: '', icon: 'Package', imageBlob: null })
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
@@ -70,7 +70,7 @@ export function EditorModal({ target, onClose }: EditorModalProps) {
     if (target.mode === 'edit-folder') {
       setFolderDraft({ name: target.folder.name, color: target.folder.color, icon: target.folder.icon })
     } else if (target.mode === 'create-folder') {
-      setFolderDraft({ name: '', color: '#6366f1', icon: 'Folder' })
+      setFolderDraft({ name: '', color: '#ee007b', icon: 'Folder' })
     } else if (target.mode === 'edit-item') {
       setItemDraft({
         name: target.item.name,
@@ -134,21 +134,28 @@ export function EditorModal({ target, onClose }: EditorModalProps) {
         })
       }
     } else {
-      const data = {
-        name: itemDraft.name,
-        description: itemDraft.description,
-        price: parseFloat(itemDraft.price) || 0,
-        link: itemDraft.link,
-        icon: itemDraft.icon,
-        imageBlob: itemDraft.imageBlob,
-        bought: false,
-        positionIndex: Date.now(),
-        dateAdded: Date.now(),
-      }
       if (target.mode === 'create-item') {
-        await createItem({ ...data, folderId: target.folderId })
+        await createItem({
+          name: itemDraft.name,
+          description: itemDraft.description,
+          price: parseFloat(itemDraft.price) || 0,
+          link: itemDraft.link,
+          icon: itemDraft.icon,
+          imageBlob: itemDraft.imageBlob,
+          bought: false,
+          positionIndex: Date.now(),
+          dateAdded: Date.now(),
+          folderId: target.folderId,
+        })
       } else {
-        await updateItem(target.item.id!, data)
+        await updateItem(target.item.id!, {
+          name: itemDraft.name,
+          description: itemDraft.description,
+          price: parseFloat(itemDraft.price) || 0,
+          link: itemDraft.link,
+          icon: itemDraft.icon,
+          imageBlob: itemDraft.imageBlob,
+        })
       }
     }
     revokePreview()

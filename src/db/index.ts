@@ -22,6 +22,7 @@ export interface Item {
   bought: boolean
   positionIndex: number
   dateAdded: number
+  updatedAt?: number
 }
 
 class ProvisioDB extends Dexie {
@@ -31,6 +32,10 @@ class ProvisioDB extends Dexie {
   constructor() {
     super('ProvisioDB')
     this.version(1).stores({
+      folders: '++id, parentId, positionIndex',
+      items: '++id, folderId, positionIndex',
+    })
+    this.version(2).stores({
       folders: '++id, parentId, positionIndex',
       items: '++id, folderId, positionIndex',
     })
@@ -46,7 +51,48 @@ export async function createFolder(data: Omit<Folder, 'id'>) {
 }
 
 export async function updateFolder(id: number, changes: Partial<Folder>) {
-  return db.folders.update(id, changes)
+  return db.transaction('rw', db.folders, async () => {
+    const oldFolder = await db.folders.get(id)
+    await db.folders.update(id, changes)
+
+    if (!oldFolder) return
+
+    // If color changed, cascade to all descendant folders
+    if (changes.color && changes.color !== oldFolder.color) {
+      const allFolders = await db.folders.toArray()
+      const descendantIds: number[] = []
+      const collect = (parentId: number) => {
+        for (const f of allFolders) {
+          if (f.parentId === parentId && f.id != null) {
+            descendantIds.push(f.id)
+            collect(f.id)
+          }
+        }
+      }
+      collect(id)
+      for (const did of descendantIds) {
+        await db.folders.update(did, { color: changes.color })
+      }
+    }
+
+    // If icon changed, cascade to direct child folders
+    if (changes.icon && changes.icon !== oldFolder.icon) {
+      const allFolders = await db.folders.toArray()
+      const descendantIds: number[] = []
+      const collect = (parentId: number) => {
+        for (const f of allFolders) {
+          if (f.parentId === parentId && f.id != null) {
+            descendantIds.push(f.id)
+            collect(f.id)
+          }
+        }
+      }
+      collect(id)
+      for (const did of descendantIds) {
+        await db.folders.update(did, { icon: changes.icon })
+      }
+    }
+  })
 }
 
 export async function deleteFolder(id: number) {
@@ -75,7 +121,7 @@ export async function createItem(data: Omit<Item, 'id'>) {
 }
 
 export async function updateItem(id: number, changes: Partial<Item>) {
-  return db.items.update(id, changes)
+  return db.items.update(id, { ...changes, updatedAt: Date.now() })
 }
 
 export async function deleteItem(id: number) {
