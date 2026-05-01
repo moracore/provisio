@@ -2,6 +2,7 @@ import { Routes, Route, NavLink } from 'react-router-dom'
 import { FolderOpen, List } from 'lucide-react'
 import { FolderView } from './components/FolderView'
 import { FlatView } from './components/FlatView'
+import { BuyWidget } from './components/BuyWidget'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         </NavLink>
       </nav>
       <main>
+        <BuyWidget />
         <Routes>
           <Route path="/" element={<FolderView />} />
           <Route path="/flat" element={<FlatView />} />
